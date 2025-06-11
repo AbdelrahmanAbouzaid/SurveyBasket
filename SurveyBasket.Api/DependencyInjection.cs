@@ -1,0 +1,102 @@
+﻿using FluentValidation.AspNetCore;
+using Mapster;
+using MapsterMapper;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Configuration;
+using Microsoft.IdentityModel.Tokens;
+using SurveyBasket.Api.Authentication;
+using SurveyBasket.Api.Persistence;
+using SurveyBasket.Api.Sevices;
+using System.Reflection;
+using System.Text;
+
+namespace SurveyBasket.Api
+{
+    public static class DependencyInjection
+    {
+        public static IServiceCollection AddServices(this IServiceCollection services, IConfiguration configuration)
+        {
+
+            services.AddControllers();
+            // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+            services.AddOpenApi();
+
+            services.AddScoped<IPollServices, PollServices>();
+            services.AddScoped<IAuthServices, AuthServices>();
+
+            services.AddFluentValidationServices();
+
+            services.AddIdentityServices(configuration);
+
+            services.AddMapsterServices();
+
+            services.AddDbContextServices(configuration);
+
+
+
+            return services;
+        }
+
+        private static IServiceCollection AddMapsterServices(this IServiceCollection services)
+        {
+            var mappinConfig = TypeAdapterConfig.GlobalSettings;
+            mappinConfig.Scan(Assembly.GetExecutingAssembly());
+            services.AddSingleton<IMapper>(new Mapper(mappinConfig));
+
+            return services;
+        }
+        private static IServiceCollection AddFluentValidationServices(this IServiceCollection services)
+        {
+            services.AddFluentValidationAutoValidation()
+               .AddValidatorsFromAssembly(Assembly.GetExecutingAssembly());
+            return services;
+        }
+        private static IServiceCollection AddIdentityServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddScoped<IJwtProvider, JwtProvider>();
+            //services.Configure<JwtOptions>(configuration.GetSection(JwtOptions.SectionName));
+            services.AddOptions<JwtOptions>()
+                .BindConfiguration(JwtOptions.SectionName)
+                .ValidateDataAnnotations()
+                .ValidateOnStart();
+
+            services.AddIdentity<AppUser, IdentityRole>()
+                .AddEntityFrameworkStores<ApplicationDbContext>();
+
+            var settings = configuration.GetRequiredSection(JwtOptions.SectionName).Get<JwtOptions>();
+
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.SaveToken = true;
+                options.TokenValidationParameters = new TokenValidationParameters()
+                {
+                    ValidateIssuer = true,
+                    ValidateAudience = true,
+                    ValidateIssuerSigningKey = true,
+                    ValidateLifetime = true,
+
+                    IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings!.Key)),
+                    ValidIssuer = settings.Issuer,
+                    ValidAudience = settings.Audience
+                };
+            });
+            return services;
+        }
+        private static IServiceCollection AddDbContextServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddDbContext<ApplicationDbContext>(option =>
+            {
+                option.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+
+            });
+            return services;
+        }
+     
+    }
+}
