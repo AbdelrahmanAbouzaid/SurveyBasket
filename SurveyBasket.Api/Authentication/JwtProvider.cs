@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
-using System.Runtime.InteropServices;
 using System.Security.Claims;
 using System.Text;
 
@@ -41,6 +40,36 @@ namespace SurveyBasket.Api.Authentication
 
             return (token: new JwtSecurityTokenHandler().WriteToken(token), expiresIn: expiresIn * 60);
 
+        }
+
+        public string? ValidateToken(string token)
+        {
+            var jwtHandler = new JwtSecurityTokenHandler();
+            var symmetricKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtOptions.Key));
+            var tokenParameter = new TokenValidationParameters()
+            {
+                IssuerSigningKey = symmetricKey,
+                ValidateIssuerSigningKey = true,
+                ValidateIssuer = false,
+                ValidateAudience = false,
+                ClockSkew = TimeSpan.Zero
+
+            };
+           
+
+            try
+            {
+                jwtHandler.ValidateToken(token,tokenParameter,out SecurityToken validatedToken);
+
+                var jwtToken = validatedToken as JwtSecurityToken;
+
+                return jwtToken.Claims.First(c => c.Type == JwtRegisteredClaimNames.Sub).Value;
+                
+            }
+            catch
+            {
+                return null;
+            }
         }
     }
 }
