@@ -11,6 +11,16 @@ namespace SurveyBasket.Api.Persistence.EntitiesConfigurations
 
             builder.Property(p => p.Title).HasMaxLength(100);
             builder.Property(p => p.Summary).HasMaxLength(1500);
+
+            builder.HasOne(p => p.CreatedBy)
+            .WithMany()
+            .HasForeignKey(p => p.CreatedById)
+            .OnDelete(DeleteBehavior.Cascade);
+
+            builder.HasOne(p => p.UpdatedBy)
+                .WithMany()
+                .HasForeignKey(p => p.UpdatedById)
+                .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }
