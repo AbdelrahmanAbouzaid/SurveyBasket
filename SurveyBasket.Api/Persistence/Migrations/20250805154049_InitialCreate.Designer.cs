@@ -12,8 +12,8 @@ using SurveyBasket.Api.Persistence;
 namespace SurveyBasket.Api.Persistence.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250611225701_AddRefreshTokenTable")]
-    partial class AddRefreshTokenTable
+    [Migration("20250805154049_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
