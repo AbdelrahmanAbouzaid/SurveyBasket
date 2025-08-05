@@ -50,6 +50,7 @@ namespace SurveyBasket.Api.Sevices
             currentPoll.IsPublished = poll.IsPublished;
             currentPoll.EndsAt = poll.EndsAt;
 
+            await context.SaveChangesAsync(cancellationToken);
             return true;
         }
     }
