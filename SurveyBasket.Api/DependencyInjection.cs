@@ -1,14 +1,10 @@
 ﻿using FluentValidation.AspNetCore;
-using Mapster;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Persistence;
-using SurveyBasket.Api.Sevices;
 using System.Reflection;
 using System.Text;
 
@@ -35,11 +31,25 @@ namespace SurveyBasket.Api
 
             services.AddDbContextServices(configuration);
 
-
+            services.AddCorsServices();
 
             return services;
         }
 
+        private static IServiceCollection AddCorsServices(this IServiceCollection services)
+        {
+            services.AddCors(options =>
+            {
+                options.AddPolicy("AllowAll",
+                    builder =>
+                    {
+                        builder.AllowAnyOrigin()
+                               .AllowAnyMethod()
+                               .AllowAnyHeader();
+                    });
+            });
+            return services;
+        }
         private static IServiceCollection AddMapsterServices(this IServiceCollection services)
         {
             var mappinConfig = TypeAdapterConfig.GlobalSettings;
@@ -114,6 +124,8 @@ namespace SurveyBasket.Api
             app.UseDataSeedingMiddleware();
 
             app.UseHttpsRedirection();
+
+            app.UseCors("AllowAll");
 
             app.UseAuthorization();
 
