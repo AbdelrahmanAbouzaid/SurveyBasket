@@ -25,6 +25,7 @@ namespace SurveyBasket.Api
 
             services.AddScoped<IPollServices, PollServices>();
             services.AddScoped<IAuthServices, AuthServices>();
+            services.AddScoped<IDbInitializer, DbInitializer>();
 
             services.AddFluentValidationServices();
 
@@ -98,5 +99,36 @@ namespace SurveyBasket.Api
             return services;
         }
      
+
+
+
+        public static WebApplication UseMiddlewares(this WebApplication app)
+        {
+            // Configure the HTTP request pipeline.
+            if (app.Environment.IsDevelopment())
+            {
+                app.MapOpenApi();
+                app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
+            }
+
+            app.UseDataSeedingMiddleware();
+
+            app.UseHttpsRedirection();
+
+            app.UseAuthorization();
+
+
+            app.MapControllers();
+
+            return app;
+        }
+
+        private static WebApplication UseDataSeedingMiddleware(this WebApplication app)
+        {
+            using var scope = app.Services.CreateScope();
+            var dbInitializer = scope.ServiceProvider.GetRequiredService<IDbInitializer>();
+            dbInitializer.InitializeAsync().Wait();
+            return app;
+        }
     }
 }
