@@ -10,14 +10,15 @@ namespace SurveyBasket.Api.Controllers
         [HttpPost]
         public async Task<IActionResult> Login([FromBody] LoginRequest loginRequest, CancellationToken cancellationToken)
         {
-            var response = await authServices.GetTokenAsync(loginRequest.email, loginRequest.password, cancellationToken);
-            return response is null ? BadRequest("Invalid Login") : Ok(response);
+            var response = await authServices.GetTokenAsync(loginRequest, cancellationToken);
+            return response.IsSuccess ? Ok(response.Value) 
+                : BadRequest(response.Error);
         }
 
         [HttpPost("refresh")]
         public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest refreshTokenRequest, CancellationToken cancellationToken)
         {
-            var response = await authServices.GetRefreshTokenAsync(refreshTokenRequest.Token, refreshTokenRequest.RefreshToken, cancellationToken);
+            var response = await authServices.GetRefreshTokenAsync(refreshTokenRequest, cancellationToken);
             return response is null ? BadRequest("Invalid Login") : Ok(response);
         }
     }
