@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
+using SurveyBasket.Api.Middlewares;
 using SurveyBasket.Api.Persistence;
 using System.Reflection;
 using System.Text;
@@ -32,6 +33,9 @@ namespace SurveyBasket.Api
             services.AddDbContextServices(configuration);
 
             services.AddCorsServices();
+
+            services.AddExceptionHandler<GlobalHandlingExceptionMiddleware>();
+            services.AddProblemDetails();
 
             return services;
         }
@@ -120,6 +124,8 @@ namespace SurveyBasket.Api
                 app.MapOpenApi();
                 app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
             }
+
+            app.UseExceptionHandler();
 
             app.UseDataSeedingMiddleware();
 
