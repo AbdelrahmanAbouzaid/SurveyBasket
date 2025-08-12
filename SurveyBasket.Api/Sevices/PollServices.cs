@@ -24,6 +24,12 @@ namespace SurveyBasket.Api.Sevices
 
         public async Task<Result<PollResponse>> AddAsync(PollRequest pollRequest, CancellationToken cancellationToken = default)
         {
+            var isExistTitle = await context.Polls
+                .AnyAsync(p => p.Title == pollRequest.Title, cancellationToken);
+
+            if (isExistTitle) 
+                return Result.Failure<PollResponse>(PollError.DuplicateTitle(pollRequest.Title));
+
             var poll = pollRequest.Adapt<Poll>();
             await context.AddAsync(pollRequest.Adapt<Poll>(), cancellationToken);
             var count = await context.SaveChangesAsync(cancellationToken);
@@ -33,6 +39,11 @@ namespace SurveyBasket.Api.Sevices
         }
         public async Task<Result> UpdateAsync(int id, PollRequest pollRequest, CancellationToken cancellationToken = default)
         {
+            var isExistTitle = await context.Polls
+                .AnyAsync(p => p.Title == pollRequest.Title, cancellationToken);
+            if (isExistTitle) 
+                return Result.Failure<PollResponse>(PollError.DuplicateTitle(pollRequest.Title));
+
             var currentPoll = await context.Polls.FindAsync(id, cancellationToken);
             if (currentPoll is null)
                 return Result.Failure(PollError.NotFound(id));

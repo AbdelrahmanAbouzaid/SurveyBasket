@@ -12,5 +12,10 @@
                 "InvalidPollData",
                 "The provided poll data is invalid."
             );
+        public static Error DuplicateTitle(string title) => 
+            new Error(
+                "DuplicatePollTitle",
+                $"A poll with the title '{title}' already exists."
+            );
     }
 }
