@@ -1,7 +1,7 @@
 ﻿global using Microsoft.EntityFrameworkCore;
+global using Microsoft.AspNetCore.Authorization;
 global using FluentValidation;
 global using Mapster;
-
 
 global using SurveyBasket.Api.Entities;
 global using SurveyBasket.Api.Sevices;
