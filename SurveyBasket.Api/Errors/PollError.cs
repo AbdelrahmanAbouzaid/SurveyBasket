@@ -5,17 +5,20 @@
         public static Error NotFound(int id) =>
             new Error(
                 "PollNotFound",
-                $"Poll with ID {id} was not found."
+                $"Poll with ID {id} was not found.",
+                StatusCodes.Status404NotFound
             );
 
         public static readonly Error InvalidPollData = new Error(
                 "InvalidPollData",
-                "The provided poll data is invalid."
+                "The provided poll data is invalid.",
+                StatusCodes.Status400BadRequest
             );
         public static Error DuplicateTitle(string title) => 
             new Error(
                 "DuplicatePollTitle",
-                $"A poll with the title '{title}' already exists."
+                $"A poll with the title '{title}' already exists.",
+                StatusCodes.Status409Conflict
             );
     }
 }
