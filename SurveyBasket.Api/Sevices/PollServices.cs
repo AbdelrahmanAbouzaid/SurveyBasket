@@ -8,12 +8,17 @@ namespace SurveyBasket.Api.Sevices
 
 
         public async Task<IEnumerable<PollResponse>> GetAllAsync(CancellationToken cancellationToken = default)
-        {
-            var polls = await context.Polls.AsNoTracking().ToListAsync(cancellationToken);
-            return polls.Adapt<IEnumerable<PollResponse>>();
-
-        }
-
+            => await context.Polls
+            .AsNoTracking()
+            .ProjectToType<PollResponse>()
+            .ToListAsync(cancellationToken);
+        public async Task<IEnumerable<PollResponse>> GetCurrentAsync(CancellationToken cancellationToken = default)
+            => await context.Polls
+            .Where(p => p.IsPublished && p.StartsAt <= DateOnly.FromDateTime(DateTime.UtcNow)
+                    && p.EndsAt >= DateOnly.FromDateTime(DateTime.UtcNow))
+            .AsNoTracking()
+            .ProjectToType<PollResponse>()
+            .ToListAsync(cancellationToken);
         public async Task<Result<PollResponse>> GetAsync(int id, CancellationToken cancellationToken = default)
         {
             var poll = await context.Polls.FindAsync(id, cancellationToken);
@@ -88,5 +93,6 @@ namespace SurveyBasket.Api.Sevices
                 : Result.Failure(PollError.InvalidPollData);
         }
 
+       
     }
 }

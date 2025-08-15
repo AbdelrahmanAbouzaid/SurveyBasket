@@ -2,6 +2,10 @@
 {
     public static class UserError
     {
-        public static readonly Error InvalidCredentials = new Error("User.InvalidCredintial", "Invalid Email Or Password");
+        public static readonly Error InvalidCredentials = new Error(
+            "User.InvalidCredintial",
+            "Invalid Email Or Password",
+            StatusCodes.Status401Unauthorized
+            );
     }
 }

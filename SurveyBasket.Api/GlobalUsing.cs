@@ -7,4 +7,5 @@ global using SurveyBasket.Api.Entities;
 global using SurveyBasket.Api.Sevices;
 global using SurveyBasket.Api.Contracts.Poll;
 global using SurveyBasket.Api.Abstractions;
-
+global using SurveyBasket.Api.Errors;
+global using SurveyBasket.Api.Extentions;
