@@ -9,5 +9,6 @@
 
         public Poll Poll { get; set; } = null!;
         public ICollection<Answer> Answers { get; set; } = [];
+        public ICollection<VoteAnswer> VoteAnswers { get; set; } = [];
     }
 }
