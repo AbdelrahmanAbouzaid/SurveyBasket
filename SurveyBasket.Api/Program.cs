@@ -1,4 +1,6 @@
 
+using Serilog;
+
 namespace SurveyBasket.Api
 {
     public class Program
@@ -9,6 +11,10 @@ namespace SurveyBasket.Api
 
             // Add services to the container.
             builder.Services.AddServices(builder.Configuration);
+
+            builder.Host.UseSerilog((context, config) =>
+                config.ReadFrom.Configuration(context.Configuration)
+            );
           
             var app = builder.Build();
 

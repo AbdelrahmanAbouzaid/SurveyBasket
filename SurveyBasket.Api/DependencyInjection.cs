@@ -3,6 +3,7 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
+using Serilog;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Middlewares;
 using SurveyBasket.Api.Persistence;
@@ -127,6 +128,8 @@ namespace SurveyBasket.Api
                 app.MapOpenApi();
                 app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
             }
+
+            app.UseSerilogRequestLogging();
 
             app.UseExceptionHandler();
 
