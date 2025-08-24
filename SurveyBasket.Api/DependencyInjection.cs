@@ -27,6 +27,7 @@ namespace SurveyBasket.Api
             services.AddScoped<IVoteService, VoteService>();
             services.AddScoped<IResultService, ResultService>();
             services.AddScoped<IDbInitializer, DbInitializer>();
+            services.AddScoped<ICacheService, CacheService>();
 
             services.AddFluentValidationServices();
 
@@ -40,6 +41,8 @@ namespace SurveyBasket.Api
 
             services.AddExceptionHandler<GlobalHandlingExceptionMiddleware>();
             services.AddProblemDetails();
+
+            services.AddDistributedMemoryCache();
 
             return services;
         }

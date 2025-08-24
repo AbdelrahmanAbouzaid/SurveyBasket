@@ -6,10 +6,12 @@ using System.Linq;
 
 namespace SurveyBasket.Api.Sevices
 {
-    public class QuestionService(ApplicationDbContext context) : IQuestionService
+    public class QuestionService(ApplicationDbContext context, ICacheService cacheService) : IQuestionService
     {
         private readonly ApplicationDbContext _context = context;
+        private readonly ICacheService _cacheService = cacheService;
 
+        private const string _cachePerfix = "avaialbeQueastions";
         public async Task<Result<IEnumerable<QuestionResponse>>> GetAllAsync(int pollId, CancellationToken cancellationToken = default)
         {
             var pollIsExists = await _context.Polls.AnyAsync(p => p.Id == pollId);
@@ -37,7 +39,13 @@ namespace SurveyBasket.Api.Sevices
             if (!pollIsExists)
                 return Result.Failure<IEnumerable<QuestionResponse>>(PollError.NotFound(pollId));
 
-            var questions = await _context.Questions
+            var cacheKey = $"{_cachePerfix}-{pollId}";
+
+            var cachedValue = await _cacheService.GetAsync<IEnumerable<QuestionResponse>>(cacheKey);
+            IEnumerable<QuestionResponse> questions = [];
+            if (cachedValue == null)
+            {
+                questions = await _context.Questions
                 .Where(q => q.IsActive && q.PollId == pollId)
                 .Include(q => q.Answers)
                 .Select(question => new QuestionResponse(
@@ -48,6 +56,11 @@ namespace SurveyBasket.Api.Sevices
                 .AsNoTracking()
                 .ToListAsync();
 
+                await _cacheService.SetAsync(cacheKey, questions);
+            }
+            else
+                questions = cachedValue;
+            
             return Result.Success<IEnumerable<QuestionResponse>>(questions);
         }
         public async Task<Result<QuestionResponse>> GetAsync(int pollId, int questionId, CancellationToken cancellationToken = default)
@@ -81,6 +94,8 @@ namespace SurveyBasket.Api.Sevices
             await _context.Questions.AddAsync(question, cancellationToken);
             await _context.SaveChangesAsync(cancellationToken);
 
+            await _cacheService.RemoveAsync($"{_cachePerfix}-{pollId}");
+
             return Result.Success(question.Adapt<QuestionResponse>());
         }
         public async Task<Result> UpdateAsync(int pollId, int questionId, QuestionRequest request, CancellationToken cancellationToken = default)
@@ -111,6 +126,9 @@ namespace SurveyBasket.Api.Sevices
             {
                 item.IsActive = request.Answers.Contains(item.Content);
             }
+
+            await _cacheService.RemoveAsync($"{_cachePerfix}-{pollId}");
+
             return await _context.SaveChangesAsync(cancellationToken) > 0
                 ? Result.Success()
                 : Result.Failure(QuestionError.InvalidQuestionData);
