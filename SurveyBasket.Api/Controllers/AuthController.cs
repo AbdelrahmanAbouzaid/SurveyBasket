@@ -21,5 +21,26 @@ namespace SurveyBasket.Api.Controllers
             var result = await authServices.GetRefreshTokenAsync(refreshTokenRequest, cancellationToken);
             return result.IsSuccess ?  Ok(result) : result.ToProblem();
         }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterRequest request, CancellationToken cancellationToken)
+        {
+            var result = await authServices.RegisterAsync(request, cancellationToken);
+            return result.IsSuccess ?  Ok() : result.ToProblem();
+        }
+
+        [HttpPost("confirm-email")]
+        public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailRequest request, CancellationToken cancellationToken)
+        {
+            var result = await authServices.ConfirmEmailAsync(request, cancellationToken);
+            return result.IsSuccess ?  Ok() : result.ToProblem();
+        }
+
+        [HttpPost("resend-confirm-email")]
+        public async Task<IActionResult> ResendConfirmEmail([FromBody] ResendConfirmEmailRequest request, CancellationToken cancellationToken)
+        {
+            var result = await authServices.ResendConfirmEmailAsync(request, cancellationToken);
+            return result.IsSuccess ?  Ok() : result.ToProblem();
+        }
     }
 }

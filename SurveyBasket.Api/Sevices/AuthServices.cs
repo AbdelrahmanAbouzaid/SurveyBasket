@@ -1,14 +1,20 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.WebUtilities;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Contracts.Auth;
 using SurveyBasket.Api.Errors;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace SurveyBasket.Api.Sevices
 {
-    public class AuthServices(UserManager<AppUser> userManager, IJwtProvider jwtProvider) : IAuthServices
+    public class AuthServices(
+        UserManager<AppUser> userManager,
+        ILogger<AuthServices> logger,
+        IJwtProvider jwtProvider) : IAuthServices
     {
         private readonly int _tokenExpiryDays = 15;
+        private readonly ILogger<AuthServices> logger = logger;
 
         public async Task<Result<AuthResponse>> GetRefreshTokenAsync(RefreshTokenRequest refreshTokenRequest, CancellationToken cancellationToken = default)
         {
@@ -51,7 +57,26 @@ namespace SurveyBasket.Api.Sevices
 
             return Result.Success(response);
         }
+        public async Task<Result> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken = default)
+        {
+            var existingUser = await userManager.Users.AnyAsync(u => u.Email == request.Email, cancellationToken);
+            if (existingUser)
+                return Result.Failure(UserError.DuplicateEmail);
 
+            var user = request.Adapt<AppUser>();
+
+            var result = await userManager.CreateAsync(user, request.Password);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.First();
+                return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+            }
+
+            var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            logger.LogInformation("Email confirmation code for {email} is {code}", user.Email, code);
+            return Result.Success();
+        }
         public async Task<Result<AuthResponse>> GetTokenAsync(LoginRequest loginRequest, CancellationToken cancellationToken = default)
         {
             var user = await userManager.FindByEmailAsync(loginRequest.email);
@@ -88,10 +113,55 @@ namespace SurveyBasket.Api.Sevices
             return Result.Success(result);
         }
 
-
         private string GenerateRefreshToken()
         {
             return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
+        }
+
+        public async Task<Result> ConfirmEmailAsync(ConfirmEmailRequest request, CancellationToken cancellationToken = default)
+        {
+            var user = await userManager.FindByIdAsync(request.UserId);
+
+            if (user is null)
+                return Result.Failure(UserError.InvalidCredentials);
+
+            if (user.EmailConfirmed)
+                return Result.Failure(UserError.DuplicateConfirmation);
+
+            var code = request.Code;
+            try
+            {
+                code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Code));
+            }
+            catch (FormatException)
+            {
+                return Result.Failure(UserError.InvalidCode);
+            }
+
+            var result = await userManager.ConfirmEmailAsync(user, code);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.First();
+                return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+            }
+            return Result.Success();
+        }
+
+        public async Task<Result> ResendConfirmEmailAsync(ResendConfirmEmailRequest request, CancellationToken cancellationToken = default)
+        {
+            var user = await userManager.FindByEmailAsync(request.Email);
+
+            if (user is null)
+                return Result.Success();
+
+            if (user.EmailConfirmed)
+                return Result.Failure(UserError.DuplicateConfirmation);
+
+            var code = await userManager.GenerateEmailConfirmationTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+            logger.LogInformation("Email confirmation code for {email} is {code}", user.Email, code);
+            return Result.Success();
+
         }
     }
 }

@@ -24,7 +24,8 @@ namespace SurveyBasket.Api.Sevices
                 var user = new AppUser
                 {
                     UserName = "admin",
-                    Email = "admin@gmail.com"
+                    Email = "admin@gmail.com",
+                    EmailConfirmed = true
                 };
                 await userManager.CreateAsync(user, "Admin@123");
                 await userManager.AddToRoleAsync(user, "Admin");

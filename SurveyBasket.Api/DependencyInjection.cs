@@ -39,6 +39,8 @@ namespace SurveyBasket.Api
 
             services.AddCorsServices();
 
+            services.AddIdentityOptionServices();
+
             services.AddExceptionHandler<GlobalHandlingExceptionMiddleware>();
             services.AddProblemDetails();
 
@@ -47,6 +49,15 @@ namespace SurveyBasket.Api
             return services;
         }
 
+        private static IServiceCollection AddIdentityOptionServices(this IServiceCollection services)
+        {
+            services.Configure<IdentityOptions>(options =>
+            {
+                options.User.RequireUniqueEmail = true;
+                options.SignIn.RequireConfirmedEmail = true;
+            });
+            return services;
+        }
         private static IServiceCollection AddCorsServices(this IServiceCollection services)
         {
             services.AddCors(options =>
@@ -85,7 +96,8 @@ namespace SurveyBasket.Api
                 .ValidateOnStart();
 
             services.AddIdentity<AppUser, IdentityRole>()
-                .AddEntityFrameworkStores<ApplicationDbContext>();
+                .AddEntityFrameworkStores<ApplicationDbContext>()
+                .AddDefaultTokenProviders();
 
             var settings = configuration.GetRequiredSection(JwtOptions.SectionName).Get<JwtOptions>();
 
