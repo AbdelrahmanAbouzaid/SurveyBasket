@@ -7,6 +7,7 @@ using Serilog;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Middlewares;
 using SurveyBasket.Api.Persistence;
+using SurveyBasket.Api.Settings;
 using System.Reflection;
 using System.Text;
 
@@ -28,6 +29,9 @@ namespace SurveyBasket.Api
             services.AddScoped<IResultService, ResultService>();
             services.AddScoped<IDbInitializer, DbInitializer>();
             services.AddScoped<ICacheService, CacheService>();
+            services.AddScoped<IEmailService, EmailService>();
+
+            services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
 
             services.AddFluentValidationServices();
 
@@ -45,6 +49,8 @@ namespace SurveyBasket.Api
             services.AddProblemDetails();
 
             services.AddDistributedMemoryCache();
+
+            services.AddHttpContextAccessor();
 
             return services;
         }
