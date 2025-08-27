@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Hangfire;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Contracts.Auth;
@@ -186,6 +187,9 @@ namespace SurveyBasket.Api.Sevices
 
             });
             await emailService.SendEmailAsync(user.Email!, emailBody);
+            //BackgroundJob.Enqueue(() => emailService.SendEmailAsync(user.Email!, emailBody));
+
+            await Task.CompletedTask;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using FluentValidation.AspNetCore;
+using Hangfire;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
@@ -51,6 +52,8 @@ namespace SurveyBasket.Api
             services.AddDistributedMemoryCache();
 
             services.AddHttpContextAccessor();
+
+            services.AddBAckgroundJobsServices(configuration);
 
             return services;
         }
@@ -137,8 +140,21 @@ namespace SurveyBasket.Api
             });
             return services;
         }
-     
 
+        private static IServiceCollection AddBAckgroundJobsServices(this IServiceCollection services, IConfiguration configuration)
+        {
+            services.AddHangfire(config => config
+               .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+               .UseSimpleAssemblyNameTypeSerializer()
+               .UseRecommendedSerializerSettings()
+               .UseSqlServerStorage(configuration.GetConnectionString("HangfireConnection"))); services.AddHangfire(config => config
+                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
+                .UseSimpleAssemblyNameTypeSerializer()
+                .UseRecommendedSerializerSettings()
+                .UseSqlServerStorage(configuration.GetConnectionString("HangfireConnection")));
+
+            return services;    
+        }
 
 
         public static WebApplication UseMiddlewares(this WebApplication app)
@@ -148,6 +164,7 @@ namespace SurveyBasket.Api
             {
                 app.MapOpenApi();
                 app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
+                app.UseHangfireDashboard("/jobs");
             }
 
             app.UseSerilogRequestLogging();
