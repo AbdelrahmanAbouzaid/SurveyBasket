@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using SurveyBasket.Api.Contracts.Auth;
+using SurveyBasket.Api.Contracts.User;
 
 namespace SurveyBasket.Api.Controllers
 {
@@ -41,6 +42,21 @@ namespace SurveyBasket.Api.Controllers
         {
             var result = await authServices.ResendConfirmEmailAsync(request, cancellationToken);
             return result.IsSuccess ?  Ok() : result.ToProblem();
+        }
+
+        [HttpPost("forget-password")]
+        public async Task<IActionResult> ForgetPassword([FromBody] ForgetPasswordRequest request)
+        {
+            var result = await authServices.SendResetPasswordAsync(request);
+            return result.IsSuccess ? Ok() : result.ToProblem();
+             
+        }
+        [HttpPost("reset-password")]
+        public async Task<IActionResult> ResetPassword([FromBody] ResetPasswordRequest request)
+        {
+            var result = await authServices.ResetPasswordAsync(request);
+            return result.IsSuccess ? Ok() : result.ToProblem();
+             
         }
     }
 }

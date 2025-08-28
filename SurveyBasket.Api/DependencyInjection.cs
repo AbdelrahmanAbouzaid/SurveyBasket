@@ -31,6 +31,7 @@ namespace SurveyBasket.Api
             services.AddScoped<IDbInitializer, DbInitializer>();
             services.AddScoped<ICacheService, CacheService>();
             services.AddScoped<IEmailService, EmailService>();
+            services.AddScoped<IUserService, UserService>();
 
             services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
 

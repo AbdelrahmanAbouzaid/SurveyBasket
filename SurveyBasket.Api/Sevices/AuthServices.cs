@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Contracts.Auth;
+using SurveyBasket.Api.Contracts.User;
 using SurveyBasket.Api.Helpers;
 using System.Security.Cryptography;
 using System.Text;
@@ -84,7 +85,7 @@ namespace SurveyBasket.Api.Sevices
             logger.LogInformation("Email confirmation code for {email} is {code}", user.Email, code);
 
             await SendEmailConfirmationAsync(user, code);
-            
+
             return Result.Success();
         }
         public async Task<Result<AuthResponse>> GetTokenAsync(LoginRequest loginRequest, CancellationToken cancellationToken = default)
@@ -122,8 +123,6 @@ namespace SurveyBasket.Api.Sevices
 
             return Result.Success(result);
         }
-
-
         public async Task<Result> ConfirmEmailAsync(ConfirmEmailRequest request, CancellationToken cancellationToken = default)
         {
             var user = await userManager.FindByIdAsync(request.UserId);
@@ -152,7 +151,6 @@ namespace SurveyBasket.Api.Sevices
             }
             return Result.Success();
         }
-
         public async Task<Result> ResendConfirmEmailAsync(ResendConfirmEmailRequest request, CancellationToken cancellationToken = default)
         {
             var user = await userManager.FindByEmailAsync(request.Email);
@@ -172,11 +170,40 @@ namespace SurveyBasket.Api.Sevices
             return Result.Success();
 
         }
+        public async Task<Result> SendResetPasswordAsync(ForgetPasswordRequest request)
+        {
+            var user = await userManager.FindByEmailAsync(request.Email);
+            if (user is null) return Result.Success();
+            if (user.EmailConfirmed)
+                return Result.Failure(UserError.InvalidCredentials);
+            var code = await userManager.GeneratePasswordResetTokenAsync(user);
+            code = WebEncoders.Base64UrlEncode(Encoding.UTF8.GetBytes(code));
+
+            logger.LogInformation("Reset password code for {email} is {code}", user.Email, code);
+
+            await SendResetPasswordConfirmationAsync(user, code);
+            return Result.Success();
+        }
+        public async Task<Result> ResetPasswordAsync(ResetPasswordRequest request)
+        {
+            var user = await userManager.FindByEmailAsync(request.Email);
+            var code = Encoding.UTF8.GetString(WebEncoders.Base64UrlDecode(request.Code));
+
+            var result = await userManager.ResetPasswordAsync(user!, code, request.NewPassword);
+            if (!result.Succeeded)
+            {
+                var error = result.Errors.First();
+                return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
+            }
+            return Result.Success();
+        }
+
+
+
         private string GenerateRefreshToken()
         {
             return Convert.ToBase64String(RandomNumberGenerator.GetBytes(64));
         }
-
         private async Task SendEmailConfirmationAsync(AppUser user, string code)
         {
             var origin = httpContextAccessor.HttpContext?.Request.Headers.Origin;
@@ -187,9 +214,26 @@ namespace SurveyBasket.Api.Sevices
 
             });
             await emailService.SendEmailAsync(user.Email!, emailBody);
+            //TODO: Use Hangfire to send email in background
             //BackgroundJob.Enqueue(() => emailService.SendEmailAsync(user.Email!, emailBody));
 
             await Task.CompletedTask;
         }
+        private async Task SendResetPasswordConfirmationAsync(AppUser user, string code)
+        {
+            var origin = httpContextAccessor.HttpContext?.Request.Headers.Origin;
+            var emailBody = EmailBodyBuilder.GenerateEmailBody("EmailConfirmation", new Dictionary<string, string>
+            {
+                {"{{name}}", $"{user.FirstName}" },
+                {"{{action_url}}", $"{origin}/auth/forget-password?userid={user.Email}&code={code}" },
+
+            });
+            await emailService.SendEmailAsync(user.Email!, emailBody);
+            //TODO: Use Hangfire to send email in background
+            //BackgroundJob.Enqueue(() => emailService.SendEmailAsync(user.Email!, emailBody));
+
+            await Task.CompletedTask;
+        }
+
     }
 }
