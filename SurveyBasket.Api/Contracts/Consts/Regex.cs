@@ -1,4 +1,4 @@
-﻿namespace SurveyBasket.Api.Contracts.Const
+﻿namespace SurveyBasket.Api.Contracts.Consts
 {
     public static class Regex
     {

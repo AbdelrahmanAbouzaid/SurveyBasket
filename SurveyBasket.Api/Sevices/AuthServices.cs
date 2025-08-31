@@ -3,10 +3,13 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.WebUtilities;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Contracts.Auth;
+using SurveyBasket.Api.Contracts.Consts;
 using SurveyBasket.Api.Contracts.User;
 using SurveyBasket.Api.Helpers;
+using SurveyBasket.Api.Persistence;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using static Org.BouncyCastle.Crypto.Engines.SM2Engine;
 
 namespace SurveyBasket.Api.Sevices
@@ -16,12 +19,14 @@ namespace SurveyBasket.Api.Sevices
         ILogger<AuthServices> logger,
         IJwtProvider jwtProvider,
         IEmailService emailService,
-        IHttpContextAccessor httpContextAccessor) : IAuthServices
+        IHttpContextAccessor httpContextAccessor,
+        ApplicationDbContext context) : IAuthServices
     {
         private readonly int _tokenExpiryDays = 15;
         private readonly ILogger<AuthServices> logger = logger;
         private readonly IEmailService emailService = emailService;
         private readonly IHttpContextAccessor httpContextAccessor = httpContextAccessor;
+        private readonly ApplicationDbContext context = context;
 
         public async Task<Result<AuthResponse>> GetRefreshTokenAsync(RefreshTokenRequest refreshTokenRequest, CancellationToken cancellationToken = default)
         {
@@ -37,9 +42,9 @@ namespace SurveyBasket.Api.Sevices
             if (userRefreshToken is null) return Result.Failure<AuthResponse>(UserError.InvalidCredentials);
 
             userRefreshToken.RevokedOn = DateTime.UtcNow;
+            var (roles, permissions) = await GetUserRolesAndPermissions(user, cancellationToken);
+            var (newToken, exprieIn) = jwtProvider.GenerateToken(user, roles, permissions);
 
-
-            var (newToken, exprieIn) = jwtProvider.GenerateToken(user);
             var newRefreshToken = GenerateRefreshToken();
             var refreshTokenExpiry = DateTime.UtcNow.AddDays(_tokenExpiryDays);
 
@@ -98,7 +103,8 @@ namespace SurveyBasket.Api.Sevices
             if (!flag)
                 return Result.Failure<AuthResponse>(UserError.InvalidCredentials);
 
-            var (token, exprieIn) = jwtProvider.GenerateToken(user);
+            var (roles, permissions) = await GetUserRolesAndPermissions(user, cancellationToken);
+            var (token, exprieIn) = jwtProvider.GenerateToken(user, roles, permissions);
             var refreshToken = GenerateRefreshToken();
             var refreshTokenExpiry = DateTime.UtcNow.AddDays(_tokenExpiryDays);
 
@@ -149,6 +155,7 @@ namespace SurveyBasket.Api.Sevices
                 var error = result.Errors.First();
                 return Result.Failure(new Error(error.Code, error.Description, StatusCodes.Status400BadRequest));
             }
+            await userManager.AddToRoleAsync(user, "Member");
             return Result.Success();
         }
         public async Task<Result> ResendConfirmEmailAsync(ResendConfirmEmailRequest request, CancellationToken cancellationToken = default)
@@ -235,5 +242,17 @@ namespace SurveyBasket.Api.Sevices
             await Task.CompletedTask;
         }
 
+        private async Task<(IEnumerable<string> roles, IEnumerable<string> permissions)> GetUserRolesAndPermissions(AppUser user, CancellationToken cancellationToken)
+        {
+            var roles = await userManager.GetRolesAsync(user);
+            var permissions =
+                await (from r in context.Roles
+                       join c in context.RoleClaims
+                       on r.Id equals c.RoleId
+                       where roles.Contains(r.Name!)
+                       select c.ClaimValue)
+                    .Distinct().ToListAsync(cancellationToken);
+            return (roles, permissions);
+        }
     }
 }

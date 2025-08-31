@@ -1,4 +1,4 @@
-﻿using SurveyBasket.Api.Contracts.Const;
+﻿using SurveyBasket.Api.Contracts.Consts;
 
 namespace SurveyBasket.Api.Contracts.User
 {

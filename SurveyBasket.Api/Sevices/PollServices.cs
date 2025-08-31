@@ -36,16 +36,16 @@ namespace SurveyBasket.Api.Sevices
                 return Result.Failure<PollResponse>(PollError.DuplicateTitle(pollRequest.Title));
 
             var poll = pollRequest.Adapt<Poll>();
-            await context.AddAsync(pollRequest.Adapt<Poll>(), cancellationToken);
+            await context.AddAsync(poll, cancellationToken);
             var count = await context.SaveChangesAsync(cancellationToken);
             return count > 0
-                ? Result.Success(pollRequest.Adapt<PollResponse>())
+                ? Result.Success(poll.Adapt<PollResponse>())
                 : Result.Failure<PollResponse>(PollError.InvalidPollData);
         }
         public async Task<Result> UpdateAsync(int id, PollRequest pollRequest, CancellationToken cancellationToken = default)
         {
             var isExistTitle = await context.Polls
-                .AnyAsync(p => p.Title == pollRequest.Title, cancellationToken);
+                .AnyAsync(p => p.Title == pollRequest.Title && p.Id != id, cancellationToken);
             if (isExistTitle) 
                 return Result.Failure<PollResponse>(PollError.DuplicateTitle(pollRequest.Title));
 

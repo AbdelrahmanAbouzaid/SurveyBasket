@@ -1,17 +1,15 @@
-﻿using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc;
-using SurveyBasket.Api.Contracts.Poll;
-using SurveyBasket.Api.Sevices;
+﻿using Microsoft.AspNetCore.Mvc;
+
 
 namespace SurveyBasket.Api.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize]
 
     public class PollsController(IPollServices pollServices) : ControllerBase
     {
         [HttpGet]
+        [HasPermission(Permissions.ReadPolls)]
         public async Task<IActionResult> GetAll()
         {
             var result = await pollServices.GetAllAsync();
@@ -25,7 +23,7 @@ namespace SurveyBasket.Api.Controllers
         }
 
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get([FromRoute] int id)
+        public async Task<IActionResult> Get(int id)
         {
             var result = await pollServices.GetAsync(id);
             return result.IsSuccess ?

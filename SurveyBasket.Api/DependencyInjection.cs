@@ -4,8 +4,8 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
-using Serilog;
 using SurveyBasket.Api.Authentication;
+using SurveyBasket.Api.Authentication.Filters;
 using SurveyBasket.Api.Middlewares;
 using SurveyBasket.Api.Persistence;
 using SurveyBasket.Api.Settings;
@@ -33,6 +33,9 @@ namespace SurveyBasket.Api
             services.AddScoped<IEmailService, EmailService>();
             services.AddScoped<IUserService, UserService>();
 
+            services.AddTransient<IAuthorizationHandler, PermissionAuthorizationHandler>();
+            services.AddTransient<IAuthorizationPolicyProvider, PermissionAuthorizationPolicyProvider>();
+
             services.Configure<MailSettings>(configuration.GetSection(nameof(MailSettings)));
 
             services.AddFluentValidationServices();
@@ -49,7 +52,7 @@ namespace SurveyBasket.Api
 
             services.AddExceptionHandler<GlobalHandlingExceptionMiddleware>();
             services.AddProblemDetails();
-
+             
             services.AddDistributedMemoryCache();
 
             services.AddHttpContextAccessor();
@@ -58,6 +61,7 @@ namespace SurveyBasket.Api
 
             return services;
         }
+
 
         private static IServiceCollection AddIdentityOptionServices(this IServiceCollection services)
         {
@@ -105,7 +109,7 @@ namespace SurveyBasket.Api
                 .ValidateDataAnnotations()
                 .ValidateOnStart();
 
-            services.AddIdentity<AppUser, IdentityRole>()
+            services.AddIdentity<AppUser, AppRole>()
                 .AddEntityFrameworkStores<ApplicationDbContext>()
                 .AddDefaultTokenProviders();
 
@@ -141,7 +145,6 @@ namespace SurveyBasket.Api
             });
             return services;
         }
-
         private static IServiceCollection AddBAckgroundJobsServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHangfire(config => config
@@ -156,6 +159,7 @@ namespace SurveyBasket.Api
 
             return services;    
         }
+
 
 
         public static WebApplication UseMiddlewares(this WebApplication app)
@@ -185,7 +189,6 @@ namespace SurveyBasket.Api
 
             return app;
         }
-
         private static WebApplication UseDataSeedingMiddleware(this WebApplication app)
         {
             using var scope = app.Services.CreateScope();
