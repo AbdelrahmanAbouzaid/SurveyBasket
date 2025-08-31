@@ -1,13 +1,14 @@
 ﻿
 using Microsoft.AspNetCore.Identity;
 using SurveyBasket.Api.Persistence;
+using System.Security.Claims;
 
 namespace SurveyBasket.Api.Sevices
 {
     public class DbInitializer(
         ApplicationDbContext context,
         UserManager<AppUser> userManager,
-        RoleManager<IdentityRole> roleManager) : IDbInitializer
+        RoleManager<AppRole> roleManager) : IDbInitializer
     {
         public async Task InitializeAsync()
         {
@@ -16,7 +17,18 @@ namespace SurveyBasket.Api.Sevices
 
             if (!context.Roles.Any())
             {
-                await roleManager.CreateAsync(new IdentityRole("Admin"));
+                await roleManager.CreateAsync(new AppRole() { Name = "Admin" });
+                await roleManager.CreateAsync(new AppRole() { Name = "Member", IsDefault = true });
+            }
+
+            if (!context.RoleClaims.Any())
+            {
+                var adminRole = await roleManager.FindByNameAsync("Admin");
+                var permissions = Permissions.GetAllPermissions();
+                foreach (var cliam in permissions)
+                {
+                    await roleManager.AddClaimAsync(adminRole!, new Claim(Permissions.Type, cliam!));
+                }
             }
 
             if (!context.Users.Any())
@@ -30,7 +42,7 @@ namespace SurveyBasket.Api.Sevices
                 await userManager.CreateAsync(user, "Admin@123");
                 await userManager.AddToRoleAsync(user, "Admin");
 
-            }
+            } 
         }
     }
 }
