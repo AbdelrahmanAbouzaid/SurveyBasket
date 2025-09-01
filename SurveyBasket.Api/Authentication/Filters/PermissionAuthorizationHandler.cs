@@ -21,7 +21,6 @@ namespace SurveyBasket.Api.Authentication.Filters
            
 
             context.Succeed(requirement);
-            return; 
         }
     }
 }
