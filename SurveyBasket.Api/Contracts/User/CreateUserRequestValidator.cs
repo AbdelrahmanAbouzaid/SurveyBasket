@@ -1,8 +1,8 @@
 ﻿namespace SurveyBasket.Api.Contracts.User
 {
-    public class UpdateUserRequestValidator : AbstractValidator<UpdateUserRequest>
+    public class CreateUserRequestValidator : AbstractValidator<CreateUserRequest>
     {
-        public UpdateUserRequestValidator()
+        public CreateUserRequestValidator()
         {
             RuleFor(x => x.FirstName)
                 .Length(0, 100)
@@ -16,6 +16,9 @@
                 .NotEmpty().WithMessage("Email is required.")
                 .EmailAddress().WithMessage("A valid email is required.");
 
+            RuleFor(x => x.Password)
+                .NotEmpty().WithMessage("Password is required.")
+                .Matches(Regex.Password);
 
             RuleFor(x => x.Roles)
                 .NotNull().WithMessage("Roles are required.")
@@ -26,7 +29,7 @@
                 .WithMessage("You can not duplicate role.")
                 .When(r => r.Roles != null);
 
+
         }
     }
-        
 }

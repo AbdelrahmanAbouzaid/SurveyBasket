@@ -21,7 +21,7 @@ namespace SurveyBasket.Api.Controllers
         }
 
         [HttpPut]
-        public async Task<IActionResult> UpdateProfile(UpdateUserRequest request)
+        public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request)
         {
             await userService.UpdateUserProfileAsync(User.GetUserId()!, request);
             return NoContent();
