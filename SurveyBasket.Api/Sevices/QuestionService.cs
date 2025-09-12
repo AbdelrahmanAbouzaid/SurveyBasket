@@ -1,4 +1,5 @@
 ﻿using SurveyBasket.Api.Contracts.Answer;
+using SurveyBasket.Api.Contracts.Common;
 using SurveyBasket.Api.Contracts.Question;
 using SurveyBasket.Api.Errors;
 using SurveyBasket.Api.Persistence;
@@ -12,16 +13,16 @@ namespace SurveyBasket.Api.Sevices
         private readonly ICacheService _cacheService = cacheService;
 
         private const string _cachePerfix = "avaialbeQueastions";
-        public async Task<Result<IEnumerable<QuestionResponse>>> GetAllAsync(int pollId, CancellationToken cancellationToken = default)
+        public async Task<Result<PaginatedList<QuestionResponse>>> GetAllAsync(int pollId, RequestFilter filter, CancellationToken cancellationToken = default)
         {
             var pollIsExists = await _context.Polls.AnyAsync(p => p.Id == pollId);
             if (!pollIsExists)
-                return Result.Failure<IEnumerable<QuestionResponse>>(PollError.NotFound(pollId));
+                return Result.Failure<PaginatedList<QuestionResponse>>(PollError.NotFound(pollId));
 
-            var questions = await _context.Questions.Where(q => q.PollId == pollId).AsNoTracking()
-                .ProjectToType<QuestionResponse>()
-                .ToListAsync(cancellationToken);
-            return Result.Success<IEnumerable<QuestionResponse>>(questions);
+            var query = _context.Questions.Where(q => q.PollId == pollId).AsNoTracking()
+                .ProjectToType<QuestionResponse>();
+            var questions = await PaginatedList<QuestionResponse>.CreateAsync(query, filter.PageNumber, filter.PageSize, cancellationToken);
+            return Result.Success(questions);
         }
         public async Task<Result<IEnumerable<QuestionResponse>>> GetAvilableAsync(int pollId, string userId, CancellationToken cancellationToken = default)
         {
