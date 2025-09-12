@@ -1,11 +1,13 @@
 ﻿using FluentValidation.AspNetCore;
 using Hangfire;
+using HealthChecks.UI.Client;
 using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
-using SurveyBasket.Api.Authentication.Filters;
+using SurveyBasket.Api.Health;
 using SurveyBasket.Api.Middlewares;
 using SurveyBasket.Api.Persistence;
 using SurveyBasket.Api.Settings;
@@ -58,7 +60,12 @@ namespace SurveyBasket.Api
 
             services.AddHttpContextAccessor();
 
-            services.AddBAckgroundJobsServices(configuration);
+            services.AddBackgroundJobsServices(configuration);
+
+            services.AddHealthChecks()
+                .AddSqlServer(name: "Database", connectionString: configuration.GetConnectionString("DefaultConnection"))
+                .AddCheck<MailProviderHealthCheck>(name:"Mail Service");
+                //.AddHangfire(options => { options.MinimumAvailableServers = 1; });
 
             return services;
         }
@@ -146,7 +153,7 @@ namespace SurveyBasket.Api
             });
             return services;
         }
-        private static IServiceCollection AddBAckgroundJobsServices(this IServiceCollection services, IConfiguration configuration)
+        private static IServiceCollection AddBackgroundJobsServices(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddHangfire(config => config
                .SetDataCompatibilityLevel(CompatibilityLevel.Version_180)
@@ -185,6 +192,10 @@ namespace SurveyBasket.Api
 
             app.UseAuthorization();
 
+            app.MapHealthChecks("health", new HealthCheckOptions
+            {
+                ResponseWriter = UIResponseWriter.WriteHealthCheckUIResponse
+            });
 
             app.MapControllers();
 
