@@ -5,6 +5,7 @@ using MapsterMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using SurveyBasket.Api.Authentication;
 using SurveyBasket.Api.Health;
@@ -13,6 +14,7 @@ using SurveyBasket.Api.Persistence;
 using SurveyBasket.Api.Settings;
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 
 namespace SurveyBasket.Api
 {
@@ -55,17 +57,19 @@ namespace SurveyBasket.Api
 
             services.AddExceptionHandler<GlobalHandlingExceptionMiddleware>();
             services.AddProblemDetails();
-             
+
             services.AddDistributedMemoryCache();
 
             services.AddHttpContextAccessor();
 
             services.AddBackgroundJobsServices(configuration);
 
+            services.AddRateLimiting();
+
             services.AddHealthChecks()
                 .AddSqlServer(name: "Database", connectionString: configuration.GetConnectionString("DefaultConnection"))
-                .AddCheck<MailProviderHealthCheck>(name:"Mail Service");
-                //.AddHangfire(options => { options.MinimumAvailableServers = 1; });
+                .AddCheck<MailProviderHealthCheck>(name: "Mail Service");
+            //.AddHangfire(options => { options.MinimumAvailableServers = 1; });
 
             return services;
         }
@@ -165,9 +169,71 @@ namespace SurveyBasket.Api
                 .UseRecommendedSerializerSettings()
                 .UseSqlServerStorage(configuration.GetConnectionString("HangfireConnection")));
 
-            return services;    
+            return services;
         }
+        private static IServiceCollection AddRateLimiting(this IServiceCollection services)
+        {
+            services.AddRateLimiter(options =>
+            {
+                options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+                options.AddPolicy(RateLimitPolicies.IpLimit, httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.Connection.RemoteIpAddress?.ToString(),
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 100,
+                            QueueLimit = 10,
+                            Window = TimeSpan.FromMinutes(1)
+                        })
+                );
+                options.AddPolicy(RateLimitPolicies.UserLimit, httpContext =>
+                    RateLimitPartition.GetFixedWindowLimiter(
+                        partitionKey: httpContext.User.GetUserId(),
+                        factory: _ => new FixedWindowRateLimiterOptions
+                        {
+                            AutoReplenishment = true,
+                            PermitLimit = 100,
+                            QueueLimit = 10,
+                            Window = TimeSpan.FromMinutes(1)
+                        })
+                );
+
+                options.AddConcurrencyLimiter(RateLimitPolicies.Concurrency, options =>
+                {
+                    options.PermitLimit = 10;
+                    options.QueueLimit = 5;
+                    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                });
+
+                //options.AddFixedWindowLimiter("fixed", options =>
+                //{
+                //    options.PermitLimit = 100;
+                //    options.Window = TimeSpan.FromMinutes(1);
+                //    options.QueueLimit = 10;
+                //    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                //});
+                //options.AddTokenBucketLimiter("token", options =>
+                //{
+                //    options.TokenLimit = 100;
+                //    options.QueueLimit = 10;
+                //    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                //    options.ReplenishmentPeriod = TimeSpan.FromMinutes(1);
+                //    options.TokensPerPeriod = 2;
+                //});
+                //options.AddSlidingWindowLimiter("sliding", options =>
+                //{
+                //    options.PermitLimit = 100;
+                //    options.Window = TimeSpan.FromMinutes(1);
+                //    options.SegmentsPerWindow = 10;
+                //    options.QueueLimit = 10;
+                //    options.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                //});
+
+            });
+            return services;
+        }
 
 
         public static WebApplication UseMiddlewares(this WebApplication app)
@@ -179,6 +245,8 @@ namespace SurveyBasket.Api
                 app.UseSwaggerUI(options => options.SwaggerEndpoint("/openapi/v1.json", "v1"));
                 app.UseHangfireDashboard("/jobs");
             }
+
+            app.UseRateLimiter();
 
             app.UseSerilogRequestLogging();
 
